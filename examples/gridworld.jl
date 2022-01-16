@@ -6,7 +6,7 @@ using Plots
 unicodeplots()
 
 # Basic MDP
-tprob = 0.5
+tprob = 0.6
 Random.seed!(0)
 randcosts = Dict(POMDPGym.GWPos(i,j) => rand() for i = 1:10, j=1:10)
 mdp = GridWorldMDP(costs=randcosts, cost_penalty=0.1, tprob=tprob)
@@ -17,7 +17,7 @@ mdp = GridWorldMDP(costs=randcosts, cost_penalty=0.1, tprob=tprob)
 # atable = Dict(s => action(policy, [s...]) for s in states(mdp.g))
 # BSON.@save "demo/gridworld_policy_table.bson" atable
 
-atable = BSON.load("ScenarioSelection.jl/examples/gridworld_policy_table.bson")[:atable]
+atable = BSON.load("/home/users/shubhgup/Codes/AutonomousRiskFramework.jl/ScenarioSelection.jl/examples/gridworld_policy_table.bson")[:atable]
 
 # Define the adversarial mdp
 adv_rewards = deepcopy(randcosts)
@@ -81,26 +81,18 @@ end
 
 fixed_s = rand(initialstate(amdp))
 
-import TreeImportanceSampling, TISExperiments
+import TISExperiments
 
-N = 100000
+N = 10000
 c = 0.3
-α = 0.1
+α = 0.5
 
-# BASELINE
-@show "Executing baseline"
+path = "/home/users/shubhgup/Codes/AutonomousRiskFramework.jl/data/gridworld"
 
-samps = [sum(collect(simulate(HistoryRecorder(), amdp, FunctionPolicy((s) -> rand(disturbance(amdp, s))), fixed_s)[:r])) for _ in 1:N]
+tree_mdp = TISExperiments.construct_tree_amdp(amdp, disturbance; reduction="sum")
 
-save("/home/users/shubhgup/Codes/AutonomousRiskFramework.jl/data/gridworld_baseline_$(N).jld2", Dict("risks:" => samps, "states:" => [], "IS_weights:" => []))
+results_baseline, results_tis, planner = TISExperiments.run_baseline_and_treeIS(amdp, tree_mdp, fixed_s, disturbance; N, c, α)
 
-# MCTS
-@show "Executing Tree-IS"
+save("$(path)_baseline_$(N).jld2", Dict("risks:" => results_baseline[1], "states:" => results_baseline[2]))
 
-tree_mdp = TISExperiments.construct_tree_amdp(amdp, disturbance)
-
-planner = TreeImportanceSampling.mcts_isdpw(tree_mdp; N, c, α)
-
-a, info = action_info(planner, TreeImportanceSampling.TreeState(fixed_s); tree_in_info=true)
-
-save("/home/users/shubhgup/Codes/AutonomousRiskFramework.jl/data/gridworld_mcts_IS_$(N).jld2", Dict("risks:" => planner.mdp.costs, "states:" => [], "IS_weights:" => planner.mdp.IS_weights, "tree:" => info[:tree]))
+save("$(path)_mcts_IS_$(N).jld2", Dict("risks:" => results_tis[1], "states:" => results_tis[2], "IS_weights:" => results_tis[3], "tree:" => results_tis[4]))
