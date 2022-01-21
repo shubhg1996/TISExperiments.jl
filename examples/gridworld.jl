@@ -17,7 +17,7 @@ mdp = GridWorldMDP(costs=randcosts, cost_penalty=0.1, tprob=tprob)
 # atable = Dict(s => action(policy, [s...]) for s in states(mdp.g))
 # BSON.@save "demo/gridworld_policy_table.bson" atable
 
-atable = BSON.load("/home/users/shubhgup/Codes/AutonomousRiskFramework.jl/ScenarioSelection.jl/examples/gridworld_policy_table.bson")[:atable]
+atable = BSON.load("examples/gridworld_policy_table.bson")[:atable]
 
 # Define the adversarial mdp
 adv_rewards = deepcopy(randcosts)
@@ -83,16 +83,35 @@ fixed_s = rand(initialstate(amdp))
 
 import TISExperiments
 
-N = 10000
+N = 100_000
 c = 0.3
-α = 0.5
+α = 0.0001
 
-path = "/home/users/shubhgup/Codes/AutonomousRiskFramework.jl/data/gridworld"
+β = 0.1
+γ = 0.4
+
+baseline = true
+
+print(N, c, α, β, γ)
+
+path = "data/gridworld"
 
 tree_mdp = TISExperiments.construct_tree_amdp(amdp, disturbance; reduction="sum")
 
-results_baseline, results_tis, planner = TISExperiments.run_baseline_and_treeIS(amdp, tree_mdp, fixed_s, disturbance; N, c, α)
+results_baseline, results_tis, planner = TISExperiments.run_baseline_and_treeIS(amdp, tree_mdp, fixed_s, disturbance; N=N, c=c, α=α, β=β, γ=γ, baseline=baseline)
 
-save("$(path)_baseline_$(N).jld2", Dict("risks:" => results_baseline[1], "states:" => results_baseline[2]))
+if baseline
+    print("Baseline metrics")
+
+    TISExperiments.evaluate_metrics(results_baseline[1]; alpha_list=[1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
+end
+
+print("\nTIS metrics: N=$(N), c=$(c), α=$(α), β=$(β)), γ=$(γ)")
+
+TISExperiments.evaluate_metrics(results_tis[1]; weights=exp.(results_tis[3]), alpha_list=[1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
+
+if baseline
+    save("$(path)_baseline_$(N).jld2", Dict("risks:" => results_baseline[1], "states:" => results_baseline[2]))
+end
 
 save("$(path)_mcts_IS_$(N).jld2", Dict("risks:" => results_tis[1], "states:" => results_tis[2], "IS_weights:" => results_tis[3], "tree:" => results_tis[4]))
