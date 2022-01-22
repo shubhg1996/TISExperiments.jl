@@ -6,9 +6,10 @@ using Plots
 unicodeplots()
 
 # Basic MDP
-tprob = 0.6
+tprob = 0.7
 Random.seed!(0)
 randcosts = Dict(POMDPGym.GWPos(i,j) => rand() for i = 1:10, j=1:10)
+# zerocosts = Dict(POMDPGym.GWPos(i,j) => 0.0 for i = 1:10, j=1:10)
 mdp = GridWorldMDP(costs=randcosts, cost_penalty=0.1, tprob=tprob)
 
 # Learn a policy that solves it
@@ -21,6 +22,7 @@ atable = BSON.load("examples/gridworld_policy_table.bson")[:atable]
 
 # Define the adversarial mdp
 adv_rewards = deepcopy(randcosts)
+# adv_rewards = deepcopy(zerocosts)
 for (k,v) in mdp.g.rewards
     if v < 0
         adv_rewards[k] += -10*v
@@ -84,13 +86,14 @@ fixed_s = rand(initialstate(amdp))
 import TISExperiments
 
 N = 100_000
-c = 0.3
-α = 0.0001
+# N = 100_00_000
+c = 0.0
+α = 0.001
 
 β = 0.1
-γ = 0.4
+γ = 0.3
 
-baseline = true
+baseline = false
 
 print(N, c, α, β, γ)
 
@@ -104,14 +107,14 @@ if baseline
     print("Baseline metrics")
 
     TISExperiments.evaluate_metrics(results_baseline[1]; alpha_list=[1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
+else
+    print("\nTIS metrics: N=$(N), c=$(c), α=$(α), β=$(β)), γ=$(γ)")
+
+    TISExperiments.evaluate_metrics(results_tis[1]; weights=exp.(results_tis[3]), alpha_list=[1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
 end
-
-print("\nTIS metrics: N=$(N), c=$(c), α=$(α), β=$(β)), γ=$(γ)")
-
-TISExperiments.evaluate_metrics(results_tis[1]; weights=exp.(results_tis[3]), alpha_list=[1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
 
 if baseline
     save("$(path)_baseline_$(N).jld2", Dict("risks:" => results_baseline[1], "states:" => results_baseline[2]))
+else
+    save("$(path)_mcts_IS_$(N).jld2", Dict("risks:" => results_tis[1], "states:" => results_tis[2], "IS_weights:" => results_tis[3], "tree:" => results_tis[4]))
 end
-
-save("$(path)_mcts_IS_$(N).jld2", Dict("risks:" => results_tis[1], "states:" => results_tis[2], "IS_weights:" => results_tis[3], "tree:" => results_tis[4]))

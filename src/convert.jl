@@ -7,23 +7,26 @@ function construct_tree_amdp(amdp, distribution; reduction="sum")
 end
 
 function run_baseline_and_treeIS(mdp, tree_mdp, fixed_s, disturbance; N=1000, c=0.3, α=0.1, thresh=0.5, β=1.0, γ=0.0, baseline=true)
+    baseline_output = ([], [])
+    tis_output = ([], [], [])
     if baseline
         # BASELINE
         @show "Executing baseline"
 
-        baseline_costs = [sum(collect(simulate(HistoryRecorder(), mdp, FunctionPolicy((s) -> rand(disturbance(mdp, s))), fixed_s)[:r])) for _ in 1:N*10]
+        baseline_costs = [sum(collect(simulate(HistoryRecorder(), mdp, FunctionPolicy((s) -> rand(disturbance(mdp, s))), fixed_s)[:r])) for _ in 1:N]
+        baseline_output = (baseline_costs, [])
+        planner = nothing
     else
-        baseline_costs = []
+        # MCTS
+        @show "Executing Tree-IS"
+
+        planner = TreeImportanceSampling.mcts_isdpw(tree_mdp; N, c, α)
+
+        a, info = action_info(planner, TreeImportanceSampling.TreeState(fixed_s); tree_in_info=true, β, γ)
+        tis_output = (planner.mdp.costs, [], planner.mdp.IS_weights, info[:tree])
     end
 
-    # MCTS
-    @show "Executing Tree-IS"
-
-    planner = TreeImportanceSampling.mcts_isdpw(tree_mdp; N, c, α)
-
-    a, info = action_info(planner, TreeImportanceSampling.TreeState(fixed_s); tree_in_info=true, β, γ)
-
-    return (baseline_costs, []), (planner.mdp.costs, [], planner.mdp.IS_weights, info[:tree]), planner
+    return baseline_output, tis_output, planner
 end
 
 function evaluate_metrics(costs; weights=nothing, alpha_list=[1e-4])
