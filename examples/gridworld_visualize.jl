@@ -85,48 +85,69 @@ end
 
 fixed_s = rand(initialstate(amdp))
 
-import TISExperiments
+import TreeImportanceSampling, TISExperiments
 
 N = 10_000
 # N = 100_00_000
 c = 0.0
-α = 0.01
+α = 1e-4
 
-β = 0.01
-γ = 0.01
+β = 0.00
+γ = 0.15
 
-schedule = 0.2 # set to Inf to switch off
+schedule = 1e-1 # set to Inf to switch off
 
-uniform_floor = 1.0 # set to 0.0 to switch off
+uniform_floor = 0.00001 # set to v.small to switch off
+
+alpha_list = [1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
 
 baseline = false
+do_save = false
 
+path = "data/gridworld_viz"
 
-path = "data/gridworld2"
+function run_baseline()
+    println("Running Baseline N=$(N)")
 
-print("Starting grid search...")
+    baseline_costs = []
+    baseline_states = []
+    for i in 1:N
+        sim = simulate(HistoryRecorder(), amdp, FunctionPolicy((s) -> rand(disturbance(amdp, s))), fixed_s)
+        push!(baseline_costs, sum(collect(sim[:r])))
+        push!(baseline_states, collect(sim[:s]))
+    end
 
-mc_samps = load("data/gridworld_baseline_10000000.jld2")["risks:"]
-mc_samps = [Float64(samp) for samp in mc_samps]
+    println("Baseline metrics")
 
-TISExperiments.run_grid_search(amdp, fixed_s, disturbance, mc_samps, ones(length(mc_samps)), path)
-# TISExperiments.run_grid_search(amdp, tree_mdp, fixed_s, disturbance, mc_samps, ones(length(mc_samps)), path; N_l=[1_000_000], save_every=1)
-# TISExperiments.run_grid_search(amdp, tree_mdp, fixed_s, disturbance, mc_samps, ones(length(mc_samps)), path; N_l=[10_000], α_l=[1e-2], β_a_l=[0.5], β_b_l=[0.3], schedule_l = [0.1])
+    TISExperiments.evaluate_metrics(baseline_costs; alpha_list)
 
-print("...Completed.")
+    if do_save
+        save("$(path)_baseline_$(N).jld2", Dict("risks:" => Float64.(baseline_costs), "states:" => baseline_states))
+    end
 
+    return Float64.(baseline_costs), baseline_states
+end
 
-# results_baseline, results_tis, planner = TISExperiments.run_baseline_and_treeIS(amdp, tree_mdp, fixed_s, disturbance; N, c, α, β, γ, schedule, uniform_floor, baseline)
+function run_tis()
+    println("Running TIS N=$(N), c=$(c), α=$(α), β=$(β)), γ=$(γ)")
 
-# if baseline
-#     print("Baseline metrics")
+    tree_mdp = TreeImportanceSampling.TreeMDP(amdp, 1.0, [], [], disturbance, "sum")
 
-#     TISExperiments.evaluate_metrics(results_baseline[1]; alpha_list=[1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
-# else
-#     print("\nTIS metrics: N=$(N), c=$(c), α=$(α), β=$(β)), γ=$(γ)")
+    planner = TreeImportanceSampling.mcts_isdpw(tree_mdp; N, c, α)
 
-#     TISExperiments.evaluate_metrics(results_tis[1]; weights=exp.(results_tis[3]), alpha_list=[1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
-# end
+    a, info = action_info(planner, TreeImportanceSampling.TreeState(fixed_s); tree_in_info=true, β, γ, schedule, uniform_floor)
+
+    println("TIS metrics")
+
+    TISExperiments.evaluate_metrics(planner.mdp.costs; weights=exp.(planner.mdp.IS_weights), alpha_list)
+
+    if do_save
+        save("$(path)_mcts_IS_$(N).jld2", Dict("risks:" => Float64.(planner.mdp.costs), "states:" => [], "IS_weights:" => Float64.(planner.mdp.IS_weights), "tree:" => info[:tree]))
+    end
+
+    return Float64.(planner.mdp.costs), Float64.(planner.mdp.IS_weights), info[:tree], planner
+end
+
 
 # if baseline
 #     save("$(path)_baseline_$(N).jld2", Dict("risks:" => results_baseline[1], "states:" => results_baseline[2]))

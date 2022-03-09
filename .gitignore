@@ -1,2 +1,4 @@
 data/
 *.jld2
+*.out
+*.pomdpx

@@ -90,26 +90,28 @@ import TISExperiments
 N = 10_000
 # N = 100_00_000
 c = 0.0
-α = 0.01
+α = 1e-4
 
-β = 0.01
-γ = 0.01
+β = 0.25
+γ = 0.25
 
-schedule = 0.2 # set to Inf to switch off
+schedule = 0.1 # set to Inf to switch off
 
 uniform_floor = 1.0 # set to 0.0 to switch off
 
 baseline = false
 
 
-path = "data/gridworld2"
+path = "data/gridworld_ablation"
+
+tree_mdp = TISExperiments.construct_tree_amdp(amdp, disturbance; reduction="sum")
 
 print("Starting grid search...")
 
 mc_samps = load("data/gridworld_baseline_10000000.jld2")["risks:"]
 mc_samps = [Float64(samp) for samp in mc_samps]
 
-TISExperiments.run_grid_search(amdp, fixed_s, disturbance, mc_samps, ones(length(mc_samps)), path)
+TISExperiments.run_ablation(amdp, fixed_s, disturbance, mc_samps, ones(length(mc_samps)), path;  N, α, β, γ, schedule_l = [0.1, Inf], floor_l = [0.9], runs=10, save_every=20)
 # TISExperiments.run_grid_search(amdp, tree_mdp, fixed_s, disturbance, mc_samps, ones(length(mc_samps)), path; N_l=[1_000_000], save_every=1)
 # TISExperiments.run_grid_search(amdp, tree_mdp, fixed_s, disturbance, mc_samps, ones(length(mc_samps)), path; N_l=[10_000], α_l=[1e-2], β_a_l=[0.5], β_b_l=[0.3], schedule_l = [0.1])
 
