@@ -4,7 +4,6 @@ authors = ["Shubh Gupta <shubhg1996@gmail.com>"]
 version = "0.1.0"
 
 [deps]
-BOMCP = "34eb85ad-9eb0-481c-b5b9-6fa2bf859cd5"
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
 BeliefUpdaters = "8bb6e9a1-7d73-552c-a44a-e5dc5634aac4"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
