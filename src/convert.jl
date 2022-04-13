@@ -45,6 +45,64 @@ function evaluate_metrics(costs; weights=nothing, alpha_list=[1e-4])
     end
 end
 
+function plot_metrics(costs_l; weights_l=[nothing], range_l = nothing, alpha=1e-4, N_list = [2^i for i=1:10], names=[nothing])
+    plots = [plot(title = "Mean", legend=:bottomright), plot(title = "VaR", legend=:bottomright), plot(title = "CVaR", legend=:bottomright), plot(title = "Worst", legend=:bottomright)]
+    
+    if range_l === nothing
+        range_l = (1, min(length.(costs_l)...))
+    end
+    
+#     LIMIT
+    costs = costs_l[1]
+    weights = weights_l[1]
+    costs = [Float64(cost) for cost in costs[range_l[2]:end]]
+    if weights===nothing
+        weights = ones(length(costs))
+    else
+        weights = [Float64(weight) for weight in weights[range_l[2]:end]]
+    end
+    
+    limit_metrics = IWRiskMetrics(costs, weights, alpha);
+    label = "Limit $(length(costs))"
+    plot!(plots[1], [1, range_l[2] - range_l[1] + 1], ones(2)*limit_metrics.mean, color=0, label=label, linestyle=:dash)
+    plot!(plots[2], [1, range_l[2] - range_l[1] + 1], ones(2)*limit_metrics.var, color=0, label=label, linestyle=:dash)
+    plot!(plots[3], [1, range_l[2] - range_l[1] + 1], ones(2)*limit_metrics.cvar, color=0, label=label, linestyle=:dash)
+    plot!(plots[4], [1, range_l[2] - range_l[1] + 1], ones(2)*limit_metrics.worst, color=0, label=label, linestyle=:dash)
+    
+    for i=2:length(costs_l)
+        costs = costs_l[i]
+        weights = weights_l[i]
+        costs = [Float64(cost) for cost in costs[range_l[1]:range_l[2]]]
+        if weights===nothing
+            weights = ones(length(costs))
+        else
+            weights = [Float64(weight) for weight in weights[range_l[1]:range_l[2]]]
+        end
+        mean_l = []
+        var_l = []
+        cvar_l = []
+        worst_l = []
+        N_l = []
+        for N in [i for i=1:10:range_l[2] - range_l[1] + 1]
+            if N > length(costs)
+                break
+            end
+            metrics = IWRiskMetrics(costs[1:N], weights[1:N], alpha);
+            push!(mean_l, metrics.mean)
+            push!(var_l, metrics.var)
+            push!(cvar_l, metrics.cvar)
+            push!(worst_l, metrics.worst)
+            push!(N_l, N)
+#             print("\nMean: $(metrics.mean), VaR: $(metrics.var), CVaR: $(metrics.cvar), Worst: $(metrics.worst)")
+        end
+        plot!(plots[1], N_l, mean_l, color=i, label=names[i])
+        plot!(plots[2], N_l, var_l, color=i, label=names[i])
+        plot!(plots[3], N_l, cvar_l, color=i, label=names[i])
+        plot!(plots[4], N_l, worst_l, color=i, label=names[i])
+    end
+    plot(plots...)
+end
+
 # Compute the error and save the results out to a csv.
 function compute_error(α, mc_samps, mc_weights, alg_samps, alg_weights)
     ground_truth = IWRiskMetrics(mc_samps, mc_weights, α)

@@ -5,7 +5,7 @@ using Random
 using LinearAlgebra
 
 ### Comment out if not using with BOMCP (see below)
-import BOMCP.x2s, BOMCP.s2x
+# import BOMCP.x2s, BOMCP.s2x
 ###
 
 struct LunarLander <: POMDP{Vector{Float64}, Vector{Float64}, Vector{Float64}}
@@ -95,6 +95,12 @@ function get_observation(s::Vector{Float64}, a::Vector{Float64}; rng::AbstractRN
     return o
 end
 
+function get_observation_noisy(s::Vector{Float64}, a::Vector{Float64}, x::Vector{Float64})
+    o = get_observation(s, a;
+                    σz=0.0, σω=0.0, σx=0.0)
+    return o .+ x
+end
+
 function get_reward(s::Vector{Float64}, a::Vector{Float64}, sp::Vector{Float64}; dt::Float64=0.1)
     x = sp[1]
     z = sp[2]
@@ -109,6 +115,22 @@ function get_reward(s::Vector{Float64}, a::Vector{Float64}, sp::Vector{Float64};
         r = -(δ + vz^2) + 100.0
     else
         r = -1.0*dt*2.0
+    end
+    return r
+end
+
+function get_cost(s::Vector{Float64}, a::Vector{Float64}, sp::Vector{Float64}; dt::Float64=0.1)
+    x = sp[1]
+    z = sp[2]
+    δ = abs(x)
+    θ = abs(sp[3])
+    vx = sp[4]
+    vz = sp[5]
+
+    if δ >= 15.0 || θ >= 0.5 || z <= 1.0
+        r = (δ + vz^2)
+    else
+        r = 1.0*dt*2.0
     end
     return r
 end
@@ -134,6 +156,8 @@ function POMDPs.initialstate_distribution(::LunarLander)
     σ = diagm(σ)
     return MvNormal(μ, σ)
 end
+
+# POMDPs.states(l::LunarLander) = POMDPs.initialstate_distribution(l)
 
 function POMDPs.isterminal(::LunarLander, s::Vector{Float64})
     x = s[1]
@@ -178,42 +202,42 @@ end
 # ω = s[6]
 
 ##### For EKF Belief Updater (comment out if not using with BOMCP)
-function BOMCP.x2s(m::LunarLander, x::Vector{Float64})
-    s = x
-    return s
-end
+# function BOMCP.x2s(m::LunarLander, x::Vector{Float64})
+#     s = x
+#     return s
+# end
 
-function BOMCP.s2x(m::LunarLander, s::Vector{Float64})
-    x = s
-    return x
-end
+# function BOMCP.s2x(m::LunarLander, s::Vector{Float64})
+#     x = s
+#     return x
+# end
 
-function BOMCP.gen_A(m::LunarLander, s::Vector{Float64}, a::Vector{Float64})
-    θ = s[3]
-    f_l = a[1]
-    thrust = a[2]
-    A = zeros(Float64, 6, 6)
-    A[1,1] = 1.0
-    A[1,4] = m.dt
-    A[2,2] = 1.0
-    A[2,5] = m.dt
-    A[3,3] = 1.0
-    A[3,6] = m.dt
-    A[4,3] = (-sin(θ)*f_l - cos(θ)*thrust)*m.dt/m.m
-    A[4,4] = 1.0
-    A[5,3] = (-sin(θ)*thrust + cos(θ)*f_l)*m.dt/m.m
-    A[5,5] = 1.0
-    A[6,6] = 1.0
-    return A
-end
+# function BOMCP.gen_A(m::LunarLander, s::Vector{Float64}, a::Vector{Float64})
+#     θ = s[3]
+#     f_l = a[1]
+#     thrust = a[2]
+#     A = zeros(Float64, 6, 6)
+#     A[1,1] = 1.0
+#     A[1,4] = m.dt
+#     A[2,2] = 1.0
+#     A[2,5] = m.dt
+#     A[3,3] = 1.0
+#     A[3,6] = m.dt
+#     A[4,3] = (-sin(θ)*f_l - cos(θ)*thrust)*m.dt/m.m
+#     A[4,4] = 1.0
+#     A[5,3] = (-sin(θ)*thrust + cos(θ)*f_l)*m.dt/m.m
+#     A[5,5] = 1.0
+#     A[6,6] = 1.0
+#     return A
+# end
 
-function BOMCP.gen_C(m::LunarLander, s::Vector{Float64})
-    z = s[2]
-    θ = s[3]
-    C = zeros(Float64, 3, 6)
-    C[1,2] = 1/(cos(θ) + eps())
-    C[1,3] = z*sin(θ)/(cos(θ)^2 + eps())
-    C[2,6] = 1.0
-    C[3,4] = 1.0
-    return C
-end
+# function BOMCP.gen_C(m::LunarLander, s::Vector{Float64})
+#     z = s[2]
+#     θ = s[3]
+#     C = zeros(Float64, 3, 6)
+#     C[1,2] = 1/(cos(θ) + eps())
+#     C[1,3] = z*sin(θ)/(cos(θ)^2 + eps())
+#     C[2,6] = 1.0
+#     C[3,4] = 1.0
+#     return C
+# end
