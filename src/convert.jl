@@ -55,11 +55,11 @@ function plot_metrics(costs_l; weights_l=[nothing], range_l = nothing, alpha=1e-
 #     LIMIT
     costs = costs_l[1]
     weights = weights_l[1]
-    costs = [Float64(cost) for cost in costs[range_l[2]:end]]
+    costs = [Float64(cost) for cost in costs]
     if weights===nothing
         weights = ones(length(costs))
     else
-        weights = [Float64(weight) for weight in weights[range_l[2]:end]]
+        weights = [Float64(weight) for weight in weights]
     end
     
     limit_metrics = IWRiskMetrics(costs, weights, alpha);

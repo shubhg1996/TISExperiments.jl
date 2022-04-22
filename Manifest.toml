@@ -1194,7 +1194,7 @@ version = "0.1.1"
 
 [[POMDPGym]]
 deps = ["BeliefUpdaters", "Cairo", "ColorSchemes", "Compose", "Distributions", "Fontconfig", "GridInterpolations", "ImageCore", "ImageShow", "Images", "LinearAlgebra", "POMDPModelTools", "POMDPModels", "POMDPPolicies", "POMDPs", "Parameters", "PyCall", "Random", "StaticArrays"]
-git-tree-sha1 = "852bf5f3af6f5b93508c6cb8af827e5b795ea064"
+git-tree-sha1 = "d4324532d941373a198609f0453494346ad2033a"
 repo-rev = "main"
 repo-url = "https://github.com/ancorso/POMDPGym.jl.git"
 uuid = "23110f14-cb49-4285-84b1-33ab57423405"
