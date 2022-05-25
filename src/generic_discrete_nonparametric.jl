@@ -1,13 +1,10 @@
-using Random
-using Distributions
-
 # Generic Discrete NonParametric with symbol support
-struct GenericDiscreteNonParametric
+@export struct GenericDiscreteNonParametric
     g_support::Any
-    pm::DiscreteNonParametric
+    pm::Distributions.DiscreteNonParametric
 end
 
-GenericDiscreteNonParametric(vs::T, ps::Ps) where {T<:Any,P<:Real,Ps<:AbstractVector{P}} =
+@export GenericDiscreteNonParametric(vs::T, ps::Ps) where {T<:Any,P<:Real,Ps<:AbstractVector{P}} =
     GenericDiscreteNonParametric([v for v in vs], DiscreteNonParametric([i for i=1:length(vs)], ps))
 
 Distributions.support(d::GenericDiscreteNonParametric) = d.g_support

@@ -37,4 +37,9 @@ end
 Distributions.logpdf(d::GenericDiscreteNonParametric, x::Any) = log(pdf(d, x))
 
 Base.iterate(d::GenericDiscreteNonParametric) = Base.iterate(support(d))
+Base.iterate(d::GenericDiscreteNonParametric, idx::Int64) = Base.iterate(support(d), idx)
 Base.length(d::GenericDiscreteNonParametric) = Base.length(support(d))
+
+Base.iterate(d::DiscreteNonParametric) = Base.iterate(support(d))
+Base.iterate(d::DiscreteNonParametric, idx::Int64) = Base.iterate(support(d), idx)
+Base.length(d::DiscreteNonParametric) = Base.length(support(d))
